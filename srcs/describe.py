@@ -8,24 +8,32 @@ def getMax(dataList):
     max = dataList[0]
     for data in dataList:
         max = data if data > max else max
-    return max
+    return round(max, 6)
 
 def getPercentile(dataList, percent):
     length = 0
-    sorted = list(dataList.copy()) 
-    sorted.sort()
-    
-    for data in sorted:
+    sorted = [] 
+    for data in dataList:
         if not math.isnan(data):
             length += 1
+            sorted.append(data)
+
+    sorted.sort()
     idx = round(length * (percent / 100))
-    return sorted[idx - 1]
+    if idx == 0:
+        idx = 1
+    
+    if length == 0 and len(dataList) != 0:
+        return math.nan
+    elif length == 0:
+        return 0
+    return round(sorted[idx - 1], 6)
 
 def getMin(dataList):
     min = dataList[0]
     for data in dataList:
         min = data if data < min else min
-    return min
+    return round(min,6)
 
 def getStd(dataList):
     mean = getMean(dataList)
@@ -35,16 +43,24 @@ def getStd(dataList):
         if not math.isnan(data):
             variance += (data - mean) ** 2 
             length += 1
-    return float((variance / length) ** 0.5)
+    if length != 0:
+        return round(float((variance / length) ** 0.5), 6)
+    elif length == 0 and len(dataList) != 0:
+        return math.nan 
+    return 0
 
 def getMean(dataList):
-    lenght = 0
+    length = 0
     total = 0
     for data in dataList:
         if not math.isnan(data):
             total += data
-            lenght += 1
-    return round(float(total / lenght), 3) 
+            length += 1
+    if length != 0:
+        return round(float(total / length), 6)
+    elif length == 0 and len(dataList) != 0:
+        return math.nan 
+    return 0
 
 def checkArgv():
     args = sys.argv
