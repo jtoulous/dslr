@@ -1,6 +1,8 @@
 import sys
-from statistics import mean
+import math
+
 import pandas as pd
+import numpy as np
 
 def getMax(dataList):
     max = dataList[0]
@@ -9,9 +11,14 @@ def getMax(dataList):
     return max
 
 def getPercentile(dataList, percent):
+    length = 0
     sorted = list(dataList.copy()) 
     sorted.sort()
-    idx = round(len(sorted) * (percent / 100))
+    
+    for data in sorted:
+        if not math.isnan(data):
+            length += 1
+    idx = round(length * (percent / 100))
     return sorted[idx - 1]
 
 def getMin(dataList):
@@ -22,12 +29,22 @@ def getMin(dataList):
 
 def getStd(dataList):
     mean = getMean(dataList)
-    variance = sum((data - mean) ** 2 for data in dataList)
-    return float((variance / (len(dataList) - 1)) ** 0.5)
+    variance = 0
+    length = 0
+    for data in dataList:
+        if not math.isnan(data):
+            variance += (data - mean) ** 2 
+            length += 1
+    return float((variance / length) ** 0.5)
 
 def getMean(dataList):
-    print (mean(dataList))
-    return float(sum(dataList) / len(dataList)) 
+    lenght = 0
+    total = 0
+    for data in dataList:
+        if not math.isnan(data):
+            total += data
+            lenght += 1
+    return round(float(total / lenght), 3) 
 
 def checkArgv():
     args = sys.argv
@@ -56,7 +73,7 @@ if __name__ == "__main__":
                 getMax(featureData)
             ])
         
-        dataframe = pd.DataFrame(stats, columns=["Feature", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"])
+        dataframe = pd.DataFrame(stats, columns=["", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"])
         transposed = dataframe.transpose()
         print(f"\n{transposed.to_string(index=True, header=False)}\n")
 
