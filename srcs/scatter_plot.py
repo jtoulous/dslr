@@ -116,4 +116,4 @@ if __name__ == "__main__":
             buildScatter()
 
     except Exception as error:
-        print(error)
+        printError(error)
