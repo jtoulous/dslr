@@ -62,6 +62,13 @@ def getMean(dataList):
         return math.nan 
     return 0
 
+def getLength(dataList):
+    length = 0
+    for data in dataList:
+        if not math.isnan(data):
+            length += 1
+    return length
+
 def checkArgv():
     args = sys.argv
     if (len(args) != 2):
@@ -78,8 +85,8 @@ if __name__ == "__main__":
         for feature in features:
             featureData = dataset[feature]
             stats.append([
-                feature[:10],
-                float(len(featureData)),
+                feature[:15],
+                getLength(featureData),
                 getMean(featureData),
                 getStd(featureData),
                 getMin(featureData),
@@ -90,8 +97,10 @@ if __name__ == "__main__":
             ])
         
         dataframe = pd.DataFrame(stats, columns=["", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"])
-        transposed = dataframe.transpose()
-        print(f"\n{transposed.to_string(index=True, header=False)}\n")
+        print(f"\n{dataframe.to_string(index=False, col_space=10)}\n")
+        
+        #transposed = dataframe.transpose()
+        #print(f"\n{transposed.to_string(index=True, header=False)}\n")
 
     except Exception as error:
         print(error)
