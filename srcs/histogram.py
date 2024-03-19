@@ -8,7 +8,7 @@ def dslrHisto():
     dataframe = pd.read_csv("../datasets/dataset_train.csv")
     featureData = dataframe["Care of Magical Creatures"]
 
-    gryffData, hufflData, ravenData, slythData = sepData(dataframe, featureData)
+    gryffData, hufflData, ravenData, slythData = separateData(dataframe, featureData)
     plt.hist(gryffData, alpha=0.4, label='Gryffindor', color='darkred')
     plt.hist(hufflData, alpha=0.4, label='Hufflepuff', color='turquoise')
     plt.hist(ravenData, alpha=0.4, label='Ravenclaw', color='black')

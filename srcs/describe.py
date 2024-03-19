@@ -1,73 +1,8 @@
 import sys
 import math
-
 import pandas as pd
 import numpy as np
-
-def getMax(dataList):
-    max = dataList[0]
-    for data in dataList:
-        max = data if data > max else max
-    return round(max, 6)
-
-def getPercentile(dataList, percent):
-    length = 0
-    sorted = [] 
-    for data in dataList:
-        if not math.isnan(data):
-            length += 1
-            sorted.append(data)
-
-    sorted.sort()
-    idx = round(length * (percent / 100))
-    if idx == 0:
-        idx = 1
-    
-    if length == 0 and len(dataList) != 0:
-        return math.nan
-    elif length == 0:
-        return 0
-    return round(sorted[idx - 1], 6)
-
-def getMin(dataList):
-    min = dataList[0]
-    for data in dataList:
-        min = data if data < min else min
-    return round(min,6)
-
-def getStd(dataList):
-    mean = getMean(dataList)
-    variance = 0
-    length = 0
-    for data in dataList:
-        if not math.isnan(data):
-            variance += (data - mean) ** 2 
-            length += 1
-    if length != 0:
-        return round(float((variance / length) ** 0.5), 6)
-    elif length == 0 and len(dataList) != 0:
-        return math.nan 
-    return 0
-
-def getMean(dataList):
-    length = 0
-    total = 0
-    for data in dataList:
-        if not math.isnan(data):
-            total += data
-            length += 1
-    if length != 0:
-        return round(float(total / length), 6)
-    elif length == 0 and len(dataList) != 0:
-        return math.nan 
-    return 0
-
-def getLength(dataList):
-    length = 0
-    for data in dataList:
-        if not math.isnan(data):
-            length += 1
-    return length
+from utils.math import getMean, getLength, getStd, getMin, getPercentile, getMax
 
 def checkArgv():
     args = sys.argv
@@ -86,14 +21,14 @@ if __name__ == "__main__":
             featureData = dataset[feature]
             stats.append([
                 feature[:15],
-                getLength(featureData),
-                getMean(featureData),
-                getStd(featureData),
-                getMin(featureData),
-                getPercentile(featureData, 25),
-                getPercentile(featureData, 50),
-                getPercentile(featureData, 75),
-                getMax(featureData)
+                round(getLength(featureData), 6),
+                round(getMean(featureData), 6),
+                round(getStd(featureData), 6),
+                round(getMin(featureData), 6),
+                round(getPercentile(featureData, 25), 6),
+                round(getPercentile(featureData, 50), 6),
+                round(getPercentile(featureData, 75), 6),
+                round(getMax(featureData), 6)
             ])
         
         dataframe = pd.DataFrame(stats, columns=["", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"])
