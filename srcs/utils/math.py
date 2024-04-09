@@ -1,3 +1,5 @@
+import math
+
 def getMax(dataList):
     max = dataList[0]
     for data in dataList:
