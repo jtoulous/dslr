@@ -74,11 +74,13 @@ def getCost(probabilities, labels, normalizer):
     return -(totalError / len(probabilities))
 
 
-#def gradientDescent(learningRate, entropicCosts, probabilities, labels, studentsData):
+#def gradientDescent(learningRate, meanCosts, probabilities, labels, studentsData):
+#    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
+#    for house in houses:
+         
 
 
-
-def training(normalizer, studentsData, labels):#OUBLIER LE BIAS
+def training(normalizer, studentsData, labels):
     epochs = 300
     learningRate = 0.01
     weightsData = initWeights(studentsData)
@@ -86,8 +88,9 @@ def training(normalizer, studentsData, labels):#OUBLIER LE BIAS
     for i in range(epochs):
         scores = getScores(weightsData, studentsData)
         probabilities = getProbabilities(scores)
-        entropicCosts = getCost(probabilities, labels, normalizer)
-        #gradientDescent(learningRate, entropicCosts, probabilities, labels, studentsData)
+        meanCost = getCost(probabilities, labels, normalizer)
+        breakpoint()
+        #gradientDescent(learningRate, meanCost, probabilities, labels, studentsData)
         
 
 if __name__ == "__main__":
