@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 import numpy as np
+import math
 
 from utils.normalizer import normalizeData
 
@@ -11,10 +12,10 @@ def initialCheck():
 
 def initWeights(studentsData):
     weightsData = {
-        'gryff': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'huffl': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'slyth': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'raven': {'weights': [], 'bestHandWeight':[] , 'bias': 0}
+        'Gryffindor': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
+        'Hufflepuff': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
+        'Ravenclaw': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
+        'Slytherin': {'weights': [], 'bestHandWeight':[] , 'bias': 0}
     }
 
     for house in weightsData:
@@ -27,8 +28,8 @@ def initWeights(studentsData):
 
 
 def getScores(weightsData, studentsData):
-    scores = [] #list of dict size 4
-    houses = ['gryff', 'huffl', 'slyth', 'raven']
+    scores = []
+    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
 
     for student in studentsData:
         studentScores = {}
@@ -49,9 +50,10 @@ def getScores(weightsData, studentsData):
         scores.append(studentScores)
     return scores
 
+
 def getProbabilities(scores):
     probabilities = []
-    houses = ['gryff', 'huffl', 'slyth', 'raven']
+    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
     
     for studentScores in scores:
         studentProbs = {}
@@ -61,7 +63,22 @@ def getProbabilities(scores):
         probabilities.append(studentProbs)
     return probabilities
 
-def training(normalizer, studentsData, labels):
+
+def getCost(probabilities, labels, normalizer):
+    totalError = 0
+    
+    for i in range(len(probabilities)):
+        trueHouse = normalizer.denormalizeHouse(labels[i])
+        prediction = probabilities[i][trueHouse]
+        totalError += math.log(prediction)
+    return -(totalError / len(probabilities))
+
+
+#def gradientDescent(learningRate, entropicCosts, probabilities, labels, studentsData):
+
+
+
+def training(normalizer, studentsData, labels):#OUBLIER LE BIAS
     epochs = 300
     learningRate = 0.01
     weightsData = initWeights(studentsData)
@@ -69,7 +86,7 @@ def training(normalizer, studentsData, labels):
     for i in range(epochs):
         scores = getScores(weightsData, studentsData)
         probabilities = getProbabilities(scores)
-        #entropicCosts = getCost(probabilities, labels, studentsData)
+        entropicCosts = getCost(probabilities, labels, normalizer)
         #gradientDescent(learningRate, entropicCosts, probabilities, labels, studentsData)
         
 
