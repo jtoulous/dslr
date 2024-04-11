@@ -11,42 +11,111 @@ def initialCheck():
 
 
 def initWeights(studentsData):
-    weightsData = {
-        'Gryffindor': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'Hufflepuff': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'Ravenclaw': {'weights': [], 'bestHandWeight':[] , 'bias': 0},
-        'Slytherin': {'weights': [], 'bestHandWeight':[] , 'bias': 0}
+    weights = {
+        'Gryffindor': {
+            'Arithmancy': 0,
+            'Astronomy': 0,
+            'Herbology': 0,
+            'Defense Against the Dark Arts': 0,
+            'Divination': 0,
+            'Muggle Studies': 0,
+            'Ancient Runes': 0,
+            'History of Magic': 0,
+            'Transfiguration': 0,
+            'Potions': 0,
+            'Care of Magical Creatures': 0,
+            'Charms': 0,
+            'Flying': 0,
+            'Best Hand': [],
+            'bias': 0
+            },
+        
+        'Hufflepuff': {
+            'Arithmancy': 0,
+            'Astronomy': 0,
+            'Herbology': 0,
+            'Defense Against the Dark Arts': 0,
+            'Divination': 0,
+            'Muggle Studies': 0,
+            'Ancient Runes': 0,
+            'History of Magic': 0,
+            'Transfiguration': 0,
+            'Potions': 0,
+            'Care of Magical Creatures': 0,
+            'Charms': 0,
+            'Flying': 0,
+            'Best Hand': [],
+            'bias': 0
+            },
+        
+        'Ravenclaw': {
+            'Arithmancy': 0,
+            'Astronomy': 0,
+            'Herbology': 0,
+            'Defense Against the Dark Arts': 0,
+            'Divination': 0,
+            'Muggle Studies': 0,
+            'Ancient Runes': 0,
+            'History of Magic': 0,
+            'Transfiguration': 0,
+            'Potions': 0,
+            'Care of Magical Creatures': 0,
+            'Charms': 0,
+            'Flying': 0,
+            'Best Hand': [],
+            'bias': 0
+            },
+        
+        'Slytherin': {
+            'Arithmancy': 0,
+            'Astronomy': 0,
+            'Herbology': 0,
+            'Defense Against the Dark Arts': 0,
+            'Divination': 0,
+            'Muggle Studies': 0,
+            'Ancient Runes': 0,
+            'History of Magic': 0,
+            'Transfiguration': 0,
+            'Potions': 0,
+            'Care of Magical Creatures': 0,
+            'Charms': 0,
+            'Flying': 0,
+            'Best Hand': [],
+            'bias': 0
+            }
     }
 
-    for house in weightsData:
-        for i in range(len(studentsData[0]) - 1):
-            weightsData[house]['weights'].append(np.random.uniform(-1, 1))
-        weightsData[house]['bestHandWeight'].append(np.random.uniform(-1, 1))
-        weightsData[house]['bestHandWeight'].append(np.random.uniform(-1, 1))
+    for house in weights:
+        for feature in weights[house]:
+            if feature == 'Best Hand':
+                weights[house][feature].append(np.random.uniform(-1, 1))
+                weights[house][feature].append(np.random.uniform(-1, 1))
+            else:
+                weights[house][feature] = np.random.uniform(-1, 1)
 
-    return weightsData
+    return weights
 
 
-def getScores(weightsData, studentsData):
+def getScores(weights, studentsData):
     scores = []
     houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
 
     for student in studentsData:
         studentScores = {}
         for house in houses:
-            weightsHouse = weightsData[house]
+            houseWeights = weights[house]
             score = 0
             i = 0
             for feature in student:
                 if feature == 'Best Hand':
                     if student[feature] == [1, 0]:
-                        score += weightsHouse['bestHandWeight'][0]       
+                        score += houseWeights[feature][0]       
                     else:
-                        score += weightsHouse['bestHandWeight'][1]       
+                        score += houseWeights[feature][1]       
                 else:
-                    score += student[feature] * weightsHouse['weights'][i]
+                    score += student[feature] * houseWeights[feature]
                 i += 1
-            studentScores[house] = score + weightsHouse['bias']
+            studentScores[house] = score + houseWeights['bias']
         scores.append(studentScores)
     return scores
 
@@ -74,23 +143,28 @@ def getCost(probabilities, labels, normalizer):
     return -(totalError / len(probabilities))
 
 
-#def gradientDescent(learningRate, meanCosts, probabilities, labels, studentsData):
-#    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
-#    for house in houses:
-         
+#def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData):
+#    for i in range(len(studentsData)):
+#        student = studentsData[i]
+#        house = labels[i]
+#        for feature in student:
+#            if feature == 'Best Hand':
+#                pass
+            
+            
+        
 
 
 def training(normalizer, studentsData, labels):
     epochs = 300
     learningRate = 0.01
-    weightsData = initWeights(studentsData)
+    weights = initWeights(studentsData)
 
     for i in range(epochs):
-        scores = getScores(weightsData, studentsData)
+        scores = getScores(weights, studentsData)
         probabilities = getProbabilities(scores)
         meanCost = getCost(probabilities, labels, normalizer)
-        breakpoint()
-        #gradientDescent(learningRate, meanCost, probabilities, labels, studentsData)
+        #gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData)
         
 
 if __name__ == "__main__":
