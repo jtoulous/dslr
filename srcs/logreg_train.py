@@ -120,14 +120,16 @@ def getScores(weights, studentsData):
     return scores
 
 
-def getProbabilities(scores):
+def softmax(scores):
     probabilities = []
     houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
-    
+
     for studentScores in scores:
         studentProbs = {}
+        expTotalScore = sum(np.exp(score) for score in studentScores.values())
+        
         for house in houses:
-            newProb = 1 / (1 + np.exp(-studentScores[house]))
+            newProb = np.exp(studentScores[house]) / expTotalScore
             studentProbs[house] = newProb
         probabilities.append(studentProbs)
     return probabilities
@@ -143,28 +145,84 @@ def getCost(probabilities, labels, normalizer):
     return -(totalError / len(probabilities))
 
 
-#def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData):
-#    for i in range(len(studentsData)):
-#        student = studentsData[i]
-#        house = labels[i]
-#        for feature in student:
-#            if feature == 'Best Hand':
-#                pass
-            
-            
-        
+def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData):
+    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
+    
+    for house in houses:
+        houseWeights = weights[house]
+        for feature in houseWeights:
+            if feature == 'Best Hand' or feature == 'bias':
+                continue
+            totalGradient = 0
+            for i, student in enumerate(studentsData):
+                y = 1 if house == labels[i] else 0
+                featureVal = student[feature]
+                prob = probabilities[i][house]
+                totalGradient += (prob - y) * featureVal
+            gradient = totalGradient / len(studentsData)
+            houseWeights[feature] -= learningRate * gradient
+    
+    for house in houses:
+        houseWeights = weights[house]
+        totalGradientLeft = 0
+        totalGradientRight = 0
+        countLeft = 0
+        countRight = 0
+        for i, student in enumerate(studentsData):
+            y = 1 if house == labels[i] else 0
+            featureVal = student['Best Hand']
+            prob = probabilities[i][house]
+
+            if student['Best Hand'] == [1, 0]:
+                totalGradientLeft += prob - y
+                countLeft += 1
+            else:
+                totalGradientRight += prob - y
+                countRight += 1
+        gradientLeft = totalGradientLeft / countLeft
+        gradientRight = totalGradientRight / countRight
+        houseWeights['Best Hand'][0] -= learningRate * gradientLeft
+        houseWeights['Best Hand'][1] -= learningRate * gradientRight
+    
+    for house in houses:
+        houseWeights = weights[house]
+        totalBiasGradient = 0
+        for i, student in enumerate(studentsData):
+            y = 1 if house == labels[i] else 0
+            prob = probabilities[i][house]
+            totalBiasGradient += prob - y
+        biasGradient = totalBiasGradient / len(studentsData)
+        houseWeights['bias'] -= learningRate * biasGradient 
+
+
+def printPredictions(probabilities, labels, normalizer):
+    for i in range(len(labels)):
+        prediction = ''
+        highestProb = 0
+        for house in probabilities[i]:
+            prob = probabilities[i][house]
+            if prob > highestProb:
+                prediction = house
+                highestProb = prob
+        print(f'{normalizer.denormalizeHouse(labels[i])} ====> {prediction}')
 
 
 def training(normalizer, studentsData, labels):
-    epochs = 300
-    learningRate = 0.01
+    epochs = 500
+    learningRate = 0.7
     weights = initWeights(studentsData)
 
     for i in range(epochs):
         scores = getScores(weights, studentsData)
-        probabilities = getProbabilities(scores)
+        probabilities = softmax(scores)
         meanCost = getCost(probabilities, labels, normalizer)
-        #gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData)
+        gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData)
+    
+        print(f'\n==========   Epoch {i}  ========')
+        print(f'Cost ====> {meanCost}')
+        if i == 499:    
+            printPredictions(probabilities, labels, normalizer)
+
         
 
 if __name__ == "__main__":
