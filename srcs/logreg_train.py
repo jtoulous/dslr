@@ -2,97 +2,71 @@ import sys
 import pandas as pd
 import numpy as np
 import math
+import colorama
 
 from utils.normalizer import normalizeData
+from utils.logs import printLog, printInfo, printError
+from brutForce import brutForce
 
 def initialCheck():
     if len(sys.argv) != 2:
         raise Exception("Error: data file needed as argument")
 
 
-def initWeights(studentsData):
-    weights = {
-        'Gryffindor': {
-            'Arithmancy': 0,
-            'Astronomy': 0,
-            'Herbology': 0,
-            'Defense Against the Dark Arts': 0,
-            'Divination': 0,
-            'Muggle Studies': 0,
-            'Ancient Runes': 0,
-            'History of Magic': 0,
-            'Transfiguration': 0,
-            'Potions': 0,
-            'Care of Magical Creatures': 0,
-            'Charms': 0,
-            'Flying': 0,
-            'Best Hand': [],
-            'bias': 0
-            },
-        
-        'Hufflepuff': {
-            'Arithmancy': 0,
-            'Astronomy': 0,
-            'Herbology': 0,
-            'Defense Against the Dark Arts': 0,
-            'Divination': 0,
-            'Muggle Studies': 0,
-            'Ancient Runes': 0,
-            'History of Magic': 0,
-            'Transfiguration': 0,
-            'Potions': 0,
-            'Care of Magical Creatures': 0,
-            'Charms': 0,
-            'Flying': 0,
-            'Best Hand': [],
-            'bias': 0
-            },
-        
-        'Ravenclaw': {
-            'Arithmancy': 0,
-            'Astronomy': 0,
-            'Herbology': 0,
-            'Defense Against the Dark Arts': 0,
-            'Divination': 0,
-            'Muggle Studies': 0,
-            'Ancient Runes': 0,
-            'History of Magic': 0,
-            'Transfiguration': 0,
-            'Potions': 0,
-            'Care of Magical Creatures': 0,
-            'Charms': 0,
-            'Flying': 0,
-            'Best Hand': [],
-            'bias': 0
-            },
-        
-        'Slytherin': {
-            'Arithmancy': 0,
-            'Astronomy': 0,
-            'Herbology': 0,
-            'Defense Against the Dark Arts': 0,
-            'Divination': 0,
-            'Muggle Studies': 0,
-            'Ancient Runes': 0,
-            'History of Magic': 0,
-            'Transfiguration': 0,
-            'Potions': 0,
-            'Care of Magical Creatures': 0,
-            'Charms': 0,
-            'Flying': 0,
-            'Best Hand': [],
-            'bias': 0
-            }
-    }
+def formatDataframe(brutForceFeatures=None):
+    dataframe = pd.read_csv(sys.argv[1])
+    dataframe = dataframe.drop(columns=["Index", "First Name", "Last Name", "Birthday"])
 
-    for house in weights:
-        for feature in weights[house]:
+######################################################################    
+    if brutForceFeatures is not None:
+        tmpDataframe = dataframe.copy()
+        featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in brutForceFeatures and feat != 'Hogwarts House']
+        dataframe = dataframe.drop(columns=featuresToDrop)
+        return dataframe
+#######################################################################
+
+    tmpDataframe = dataframe.copy()
+    chosenFeatures = []
+    done = 0
+    
+    tmpDataframe = tmpDataframe.drop(columns=["Hogwarts House"])
+    while True:    
+        print('')
+        for i, feature in enumerate(tmpDataframe.columns):     
+            printInfo(f'{i}: {feature}')
+        printLog('\nfinished = \'done\'\n')
+        
+        entry = input('make your choice: ')
+        if entry == 'done':
+            tmpDataframe = dataframe.copy()
+            featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in chosenFeatures and feat != 'Hogwarts House']
+            dataframe = dataframe.drop(columns=featuresToDrop)
+            return dataframe, chosenFeatures
+        
+        entry = int(entry)
+        if entry >= len(tmpDataframe.columns):
+            printError(f'feature {entry} not available')
+        
+        chosenfeat = tmpDataframe.columns[entry]
+        chosenFeatures.append(chosenfeat)
+        tmpDataframe = tmpDataframe.drop(columns=[chosenfeat])
+
+
+def initWeights(studentsData, features):
+    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
+    weights = {
+        'Gryffindor': {},
+        'Hufflepuff': {},
+        'Ravenclaw': {},
+        'Slytherin': {}
+    }
+    for house in houses:    
+        for feature in features:
             if feature == 'Best Hand':
-                weights[house][feature].append(np.random.uniform(-1, 1))
-                weights[house][feature].append(np.random.uniform(-1, 1))
+                weights[house][feature] = [np.random.uniform(-1, 1), np.random.uniform(-1, 1)]
             else:
                 weights[house][feature] = np.random.uniform(-1, 1)
-
+        weights[house]['bias'] = 0
     return weights
 
 
@@ -145,7 +119,7 @@ def getCost(probabilities, labels, normalizer):
     return -(totalError / len(probabilities))
 
 
-def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData):
+def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData, features):
     houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
     
     for house in houses:
@@ -162,27 +136,28 @@ def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, stu
             gradient = totalGradient / len(studentsData)
             houseWeights[feature] -= learningRate * gradient
     
-    for house in houses:
-        houseWeights = weights[house]
-        totalGradientLeft = 0
-        totalGradientRight = 0
-        countLeft = 0
-        countRight = 0
-        for i, student in enumerate(studentsData):
-            y = 1 if house == labels[i] else 0
-            featureVal = student['Best Hand']
-            prob = probabilities[i][house]
+    if 'Best Hand' in features:
+        for house in houses:
+            houseWeights = weights[house]
+            totalGradientLeft = 0
+            totalGradientRight = 0
+            countLeft = 0
+            countRight = 0
+            for i, student in enumerate(studentsData):
+                y = 1 if house == labels[i] else 0
+                featureVal = student['Best Hand']
+                prob = probabilities[i][house]
 
-            if student['Best Hand'] == [1, 0]:
-                totalGradientLeft += prob - y
-                countLeft += 1
-            else:
-                totalGradientRight += prob - y
-                countRight += 1
-        gradientLeft = totalGradientLeft / countLeft
-        gradientRight = totalGradientRight / countRight
-        houseWeights['Best Hand'][0] -= learningRate * gradientLeft
-        houseWeights['Best Hand'][1] -= learningRate * gradientRight
+                if student['Best Hand'] == [1, 0]:
+                    totalGradientLeft += prob - y
+                    countLeft += 1
+                else:
+                    totalGradientRight += prob - y
+                    countRight += 1
+            gradientLeft = totalGradientLeft / countLeft
+            gradientRight = totalGradientRight / countRight
+            houseWeights['Best Hand'][0] -= learningRate * gradientLeft
+            houseWeights['Best Hand'][1] -= learningRate * gradientRight
     
     for house in houses:
         houseWeights = weights[house]
@@ -207,30 +182,83 @@ def printPredictions(probabilities, labels, normalizer):
         print(f'{normalizer.denormalizeHouse(labels[i])} ====> {prediction}')
 
 
-def training(normalizer, studentsData, labels):
-    epochs = 500
+def training(normalizer, studentsData, labels, features, brutForce=0):
+    epochs = 200
     learningRate = 0.7
-    weights = initWeights(studentsData)
+    weights = initWeights(studentsData, features)
 
     for i in range(epochs):
         scores = getScores(weights, studentsData)
         probabilities = softmax(scores)
         meanCost = getCost(probabilities, labels, normalizer)
-        gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData)
+        gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData, features)
     
         print(f'\n==========   Epoch {i}  ========')
         print(f'Cost ====> {meanCost}')
         if i == 499:    
             printPredictions(probabilities, labels, normalizer)
+    
+    if brutForce == 0:
+        return weights
+    else:
+        return meanCost
 
-        
+#########################################################
+
+def runTraining(features, records):
+    dataframe = formatDataframe(features)
+    normalizer, studentsData, labels = normalizeData(dataframe)
+    cost = training(normalizer, studentsData, labels, features, 1)
+    if records['bestCost'] is None or cost < records['bestCost']:
+        records['bestCost'] = cost
+        records['bestFeatures'] = list(features)
+
+def rekMeDaddy(featuresToTest, maxFeatures, records):
+    features = ['Arithmancy', 'Astronomy', 'Herbology', 'Defense Against the Dark Arts', 'Divination', 'Muggle Studies', 'Ancient Runes', 'History of Magic', 'Transfiguration', 'Potions', 'Care of Magical Creatures', 'Charms', 'Flying', 'Best Hand']
+    for i in range(14):
+        if (len(featuresToTest) == maxFeatures):
+            runTraining(featuresToTest, records)
+            return 
+
+        while features[i] in featuresToTest:
+            i += 1
+            if i == 14:
+                return
+
+        featuresToTest.append(features[i])
+        rekMeDaddy(featuresToTest, maxFeatures, records)
+        featuresToTest.pop()
+        i += 1
+
+def brutForce():
+    bestFeatures = []
+    bestCost = None
+    maxFeatures = 1
+    records = {
+        'bestCost': None,
+        'bestFeatures': []
+        }
+
+    while maxFeatures < 14:
+        rekMeDaddy([], maxFeatures, records)
+        maxFeatures += 1
+    print(f"minimal cost = {records['bestCost']} ====> {records['bestFeatures']}")
+
+##################################################################
+
+
 
 if __name__ == "__main__":
     try:
         initialCheck()
-        dataframe = pd.read_csv(sys.argv[1])
-        normalizer, studentsData, labelsData = normalizeData(dataframe)
-        training(normalizer, studentsData, labelsData)
+        brutForce()
+        #dataframe, features = formatDataframe()
+        #normalizer, studentsData, labels = normalizeData(dataframe)
+        #training(normalizer, studentsData, labels, features)
+        #for feature in features:
+        #    print(f'\n{feature}')
+
+#brutForce()
 
     except Exception as error:
         print(error)

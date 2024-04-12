@@ -18,7 +18,6 @@ def calcStd(dataframe, features):
     return stds
 
 def normalizeData(dataframe):
-    dataframe = dataframe.drop(columns=["Index", "First Name", "Last Name", "Birthday"])
     numericalFeatures = dataframe.select_dtypes(include=['float64'])
     normalizer = Normalizer(dataframe, numericalFeatures)
     featuresData = []
@@ -32,8 +31,9 @@ def normalizeData(dataframe):
         for feature in numericalFeatures:
             new_data[feature] = normalizer.normalize(dataframe[feature][i], feature)
         
-        bestHand = dataframe['Best Hand'][i]
-        new_data['Best Hand'] = normalizer.normalizeHand(bestHand)
+        if 'Best Hand' in dataframe.columns:
+            bestHand = dataframe['Best Hand'][i]
+            new_data['Best Hand'] = normalizer.normalizeHand(bestHand)
 
         house = dataframe['Hogwarts House'][i]
         labelsData.append(normalizer.normalizeHouse(house))
