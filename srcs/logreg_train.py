@@ -2,14 +2,14 @@ import sys
 import pandas as pd
 import numpy as np
 import math
-import colorama
+from colorama import Fore, Style
 
 from utils.normalizer import normalizeData
 from utils.logs import printLog, printInfo, printError
 from brutForce import brutForce
 
 def initialCheck():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         raise Exception("Error: data file needed as argument")
 
 
@@ -34,9 +34,10 @@ def formatDataframe(brutForceFeatures=None):
         print('')
         for i, feature in enumerate(tmpDataframe.columns):     
             printInfo(f'{i}: {feature}')
-        printLog('\nfinished = \'done\'\n')
+        printInfo('Finished : \'done\'\n')
         
-        entry = input('make your choice: ')
+        entry = input(f'{Fore.GREEN}make your choice: {Style.RESET_ALL}')
+
         if entry == 'done':
             tmpDataframe = dataframe.copy()
             featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in chosenFeatures and feat != 'Hogwarts House']
@@ -172,6 +173,7 @@ def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, stu
 
 def printPredictions(probabilities, labels, normalizer):
     for i in range(len(labels)):
+        trueHouse = normalizer.denormalizeHouse(labels[i])
         prediction = ''
         highestProb = 0
         for house in probabilities[i]:
@@ -179,12 +181,15 @@ def printPredictions(probabilities, labels, normalizer):
             if prob > highestProb:
                 prediction = house
                 highestProb = prob
-        print(f'{normalizer.denormalizeHouse(labels[i])} ====> {prediction}')
+        if trueHouse == prediction:
+            printLog(f'{trueHouse} ======> {prediction}')
+        else:
+            printError(f'{trueHouse} ======> {prediction}')
 
 
-def training(normalizer, studentsData, labels, features, brutForce=0):
-    epochs = 200
-    learningRate = 0.7
+def training(normalizer, studentsData, labels, features, brutForce=None):
+    epochs = 100
+    learningRate = 0.1
     weights = initWeights(studentsData, features)
 
     for i in range(epochs):
@@ -193,17 +198,28 @@ def training(normalizer, studentsData, labels, features, brutForce=0):
         meanCost = getCost(probabilities, labels, normalizer)
         gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData, features)
     
-        print(f'\n==========   Epoch {i}  ========')
-        print(f'Cost ====> {meanCost}')
-        if i == 499:    
-            printPredictions(probabilities, labels, normalizer)
-    
-    if brutForce == 0:
+        if brutForce == None:    
+            print(f'\n==========   Epoch {i}  ========')
+            print(f'Cost ====> {meanCost}')
+            if i == epochs - 1:    
+                printPredictions(probabilities, labels, normalizer)
+
+    printInfo(f'\n===> Used features : {", ".join(features)}')
+    printInfo(f'===> Final cost = {meanCost}')
+    if brutForce == None:
         return weights
     else:
         return meanCost
 
 #########################################################
+
+def AlreadyTested(featuresToTest, alreadyTested):
+    featuresToTestSet = set(featuresToTest)
+    for tested in alreadyTested:
+        if featuresToTestSet == set(tested):
+            return True
+    return False
+            
 
 def runTraining(features, records):
     dataframe = formatDataframe(features)
@@ -213,11 +229,13 @@ def runTraining(features, records):
         records['bestCost'] = cost
         records['bestFeatures'] = list(features)
 
-def rekMeDaddy(featuresToTest, maxFeatures, records):
+def rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested):
     features = ['Arithmancy', 'Astronomy', 'Herbology', 'Defense Against the Dark Arts', 'Divination', 'Muggle Studies', 'Ancient Runes', 'History of Magic', 'Transfiguration', 'Potions', 'Care of Magical Creatures', 'Charms', 'Flying', 'Best Hand']
     for i in range(14):
         if (len(featuresToTest) == maxFeatures):
-            runTraining(featuresToTest, records)
+            if not AlreadyTested(featuresToTest, alreadyTested):
+                runTraining(featuresToTest, records)
+                alreadyTested.append(list(featuresToTest))
             return 
 
         while features[i] in featuresToTest:
@@ -226,7 +244,7 @@ def rekMeDaddy(featuresToTest, maxFeatures, records):
                 return
 
         featuresToTest.append(features[i])
-        rekMeDaddy(featuresToTest, maxFeatures, records)
+        rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested)
         featuresToTest.pop()
         i += 1
 
@@ -240,7 +258,7 @@ def brutForce():
         }
 
     while maxFeatures < 14:
-        rekMeDaddy([], maxFeatures, records)
+        rekMeDaddy([], maxFeatures, records, [])
         maxFeatures += 1
     print(f"minimal cost = {records['bestCost']} ====> {records['bestFeatures']}")
 
@@ -251,14 +269,12 @@ def brutForce():
 if __name__ == "__main__":
     try:
         initialCheck()
-        brutForce()
-        #dataframe, features = formatDataframe()
-        #normalizer, studentsData, labels = normalizeData(dataframe)
-        #training(normalizer, studentsData, labels, features)
-        #for feature in features:
-        #    print(f'\n{feature}')
-
-#brutForce()
+        if len(sys.argv) > 2 and sys.argv[2] == "--bf":
+            brutForce()
+        else:
+            dataframe, features = formatDataframe()
+            normalizer, studentsData, labels = normalizeData(dataframe)
+            training(normalizer, studentsData, labels, features)
 
     except Exception as error:
         print(error)
