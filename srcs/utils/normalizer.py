@@ -1,7 +1,9 @@
 import sys
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
-from utils.math import getMean, getStd
+from .math import getMean, getStd
+from .logs import printLog, printError
 
 def calcMeans(dataframe, features):
     means = {}
@@ -20,27 +22,27 @@ def calcStd(dataframe, features):
 def normalizeData(dataframe):
     numericalFeatures = dataframe.select_dtypes(include=['float64'])
     normalizer = Normalizer(dataframe, numericalFeatures)
-    featuresData = []
-    labelsData = []
+    studentsData = []
+    #labelsData = []
     
     for feature in numericalFeatures:
         normalizer.cleanNan(dataframe, feature)
 
     for i in range(len(dataframe)):
-        new_data = {}
+        newData = {'features': {}}
         for feature in numericalFeatures:
-            new_data[feature] = normalizer.normalize(dataframe[feature][i], feature)
+            newData['features'][feature] = normalizer.normalize(dataframe[feature][i], feature)
         
         if 'Best Hand' in dataframe.columns:
             bestHand = dataframe['Best Hand'][i]
-            new_data['Best Hand'] = normalizer.normalizeHand(bestHand)
+            newData['features']['Best Hand'] = normalizer.normalizeHand(bestHand)
 
         house = dataframe['Hogwarts House'][i]
-        labelsData.append(normalizer.normalizeHouse(house))
+        newData['label'] = house
 
-        featuresData.append(new_data)          
+        studentsData.append(newData)
 
-    return normalizer, featuresData, labelsData
+    return normalizer, studentsData
 
 
 class Normalizer:
@@ -91,5 +93,12 @@ class Normalizer:
             return "Slytherin"
 
     def cleanNan(self, dataframe, feature):
-        mean = self.means[feature]
-        dataframe[feature] = dataframe[feature].fillna(mean)
+        houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
+        medians = {}
+
+        for house in houses:
+            houseData = dataframe[dataframe['Hogwarts House'] == house]
+            medians[house] = houseData[feature].median()
+
+        for house in houses:
+            dataframe.loc[(dataframe['Hogwarts House'] == house) & dataframe[feature].isna(), feature] = medians[house]

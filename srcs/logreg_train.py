@@ -6,70 +6,8 @@ from colorama import Fore, Style
 
 from utils.normalizer import normalizeData
 from utils.logs import printLog, printInfo, printError
-from brutForce import brutForce
-
-def initialCheck():
-    if len(sys.argv) < 2:
-        raise Exception("Error: data file needed as argument")
-
-
-def formatDataframe(brutForceFeatures=None):
-    dataframe = pd.read_csv(sys.argv[1])
-    dataframe = dataframe.drop(columns=["Index", "First Name", "Last Name", "Birthday"])
-
-######################################################################    
-    if brutForceFeatures is not None:
-        tmpDataframe = dataframe.copy()
-        featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in brutForceFeatures and feat != 'Hogwarts House']
-        dataframe = dataframe.drop(columns=featuresToDrop)
-        return dataframe
-#######################################################################
-
-    tmpDataframe = dataframe.copy()
-    chosenFeatures = []
-    done = 0
-    
-    tmpDataframe = tmpDataframe.drop(columns=["Hogwarts House"])
-    while True:    
-        print('')
-        for i, feature in enumerate(tmpDataframe.columns):     
-            printInfo(f'{i}: {feature}')
-        printInfo('Finished : \'done\'\n')
-        
-        entry = input(f'{Fore.GREEN}make your choice: {Style.RESET_ALL}')
-
-        if entry == 'done':
-            tmpDataframe = dataframe.copy()
-            featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in chosenFeatures and feat != 'Hogwarts House']
-            dataframe = dataframe.drop(columns=featuresToDrop)
-            return dataframe, chosenFeatures
-        
-        entry = int(entry)
-        if entry >= len(tmpDataframe.columns):
-            printError(f'feature {entry} not available')
-        
-        chosenfeat = tmpDataframe.columns[entry]
-        chosenFeatures.append(chosenfeat)
-        tmpDataframe = tmpDataframe.drop(columns=[chosenfeat])
-
-
-def initWeights(studentsData, features):
-    houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
-    weights = {
-        'Gryffindor': {},
-        'Hufflepuff': {},
-        'Ravenclaw': {},
-        'Slytherin': {}
-    }
-    for house in houses:    
-        for feature in features:
-            if feature == 'Best Hand':
-                weights[house][feature] = [np.random.uniform(-1, 1), np.random.uniform(-1, 1)]
-            else:
-                weights[house][feature] = np.random.uniform(-1, 1)
-        weights[house]['bias'] = 0
-    return weights
-
+from utils.tools import getLastFeatures, initialCheck, formatDataframe, checkBestResult, AlreadyTested, printEpochInfo, endOfTraining, initWeights
+from bruteForce import brutForce
 
 def getScores(weights, studentsData):
     scores = []
@@ -78,17 +16,18 @@ def getScores(weights, studentsData):
     for student in studentsData:
         studentScores = {}
         for house in houses:
+            studentFeatures = student['features']
             houseWeights = weights[house]
             score = 0
             i = 0
-            for feature in student:
+            for feature in studentFeatures:
                 if feature == 'Best Hand':
-                    if student[feature] == [1, 0]:
+                    if studentFeatures[feature] == [1, 0]:
                         score += houseWeights[feature][0]       
                     else:
                         score += houseWeights[feature][1]       
                 else:
-                    score += student[feature] * houseWeights[feature]
+                    score += studentFeatures[feature] * houseWeights[feature]
                 i += 1
             studentScores[house] = score + houseWeights['bias']
         scores.append(studentScores)
@@ -110,19 +49,25 @@ def softmax(scores):
     return probabilities
 
 
-def getCost(probabilities, labels, normalizer):
+def getCost(probabilities, studentsData, normalizer):
     totalError = 0
     
     for i in range(len(probabilities)):
-        trueHouse = normalizer.denormalizeHouse(labels[i])
+        trueHouse = studentsData[i]['label']
         prediction = probabilities[i][trueHouse]
         totalError += math.log(prediction)
     return -(totalError / len(probabilities))
 
 
-def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, studentsData, features):
+def gradientDescent(weights, learningRate, probabilities, studentsData, features):
     houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
-    
+    gradientData = {
+        'Gryffindor': {},
+        'Hufflepuff': {},
+        'Ravenclaw': {},
+        'Slytherin': {}
+    }
+
     for house in houses:
         houseWeights = weights[house]
         for feature in houseWeights:
@@ -130,12 +75,13 @@ def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, stu
                 continue
             totalGradient = 0
             for i, student in enumerate(studentsData):
-                y = 1 if house == labels[i] else 0
-                featureVal = student[feature]
+                y = 1 if house == student['label'] else 0
+                featureVal = student['features'][feature]
                 prob = probabilities[i][house]
                 totalGradient += (prob - y) * featureVal
             gradient = totalGradient / len(studentsData)
             houseWeights[feature] -= learningRate * gradient
+            gradientData[house][feature] = gradient
     
     if 'Best Hand' in features:
         for house in houses:
@@ -145,11 +91,11 @@ def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, stu
             countLeft = 0
             countRight = 0
             for i, student in enumerate(studentsData):
-                y = 1 if house == labels[i] else 0
-                featureVal = student['Best Hand']
+                y = 1 if house == student['label'] else 0
+                featureVal = student['features']['Best Hand']
                 prob = probabilities[i][house]
 
-                if student['Best Hand'] == [1, 0]:
+                if featureVal == [1, 0]:
                     totalGradientLeft += prob - y
                     countLeft += 1
                 else:
@@ -159,111 +105,39 @@ def gradientDescent(weights, learningRate, meanCosts, probabilities, labels, stu
             gradientRight = totalGradientRight / countRight
             houseWeights['Best Hand'][0] -= learningRate * gradientLeft
             houseWeights['Best Hand'][1] -= learningRate * gradientRight
+            gradientData[house]['left'] = gradientLeft
+            gradientData[house]['right'] = gradientRight
     
     for house in houses:
         houseWeights = weights[house]
         totalBiasGradient = 0
         for i, student in enumerate(studentsData):
-            y = 1 if house == labels[i] else 0
+            y = 1 if house == student['label'] else 0
             prob = probabilities[i][house]
             totalBiasGradient += prob - y
         biasGradient = totalBiasGradient / len(studentsData)
         houseWeights['bias'] -= learningRate * biasGradient 
+    return gradientData
 
 
-def printPredictions(probabilities, labels, normalizer):
-    for i in range(len(labels)):
-        trueHouse = normalizer.denormalizeHouse(labels[i])
-        prediction = ''
-        highestProb = 0
-        for house in probabilities[i]:
-            prob = probabilities[i][house]
-            if prob > highestProb:
-                prediction = house
-                highestProb = prob
-        if trueHouse == prediction:
-            printLog(f'{trueHouse} ======> {prediction}')
-        else:
-            printError(f'{trueHouse} ======> {prediction}')
-
-
-def training(normalizer, studentsData, labels, features, brutForce=None):
-    epochs = 100
-    learningRate = 0.1
-    weights = initWeights(studentsData, features)
+def training(normalizer, studentsData, features, brutForce=None):
+    epochs = 700
+    learningRate = 0.3
+    weights = initWeights(features)
+    bestResults = {'bestWeights': {}, 'bestCost': None, 'bestProbs': []}
 
     for i in range(epochs):
         scores = getScores(weights, studentsData)
         probabilities = softmax(scores)
-        meanCost = getCost(probabilities, labels, normalizer)
-        gradientDescent(weights, learningRate, meanCost, probabilities, labels, studentsData, features)
-    
-        if brutForce == None:    
-            print(f'\n==========   Epoch {i}  ========')
-            print(f'Cost ====> {meanCost}')
-            if i == epochs - 1:    
-                printPredictions(probabilities, labels, normalizer)
+        meanCost = getCost(probabilities, studentsData, normalizer)
+        checkBestResult(bestResults, meanCost, weights, probabilities)
 
-    printInfo(f'\n===> Used features : {", ".join(features)}')
-    printInfo(f'===> Final cost = {meanCost}')
-    if brutForce == None:
-        return weights
-    else:
-        return meanCost
+        gradients = gradientDescent(weights, learningRate, probabilities, studentsData, features)
+        if brutForce == None:
+            printEpochInfo(i, meanCost, gradients)
 
-#########################################################
-
-def AlreadyTested(featuresToTest, alreadyTested):
-    featuresToTestSet = set(featuresToTest)
-    for tested in alreadyTested:
-        if featuresToTestSet == set(tested):
-            return True
-    return False
-            
-
-def runTraining(features, records):
-    dataframe = formatDataframe(features)
-    normalizer, studentsData, labels = normalizeData(dataframe)
-    cost = training(normalizer, studentsData, labels, features, 1)
-    if records['bestCost'] is None or cost < records['bestCost']:
-        records['bestCost'] = cost
-        records['bestFeatures'] = list(features)
-
-def rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested):
-    features = ['Arithmancy', 'Astronomy', 'Herbology', 'Defense Against the Dark Arts', 'Divination', 'Muggle Studies', 'Ancient Runes', 'History of Magic', 'Transfiguration', 'Potions', 'Care of Magical Creatures', 'Charms', 'Flying', 'Best Hand']
-    for i in range(14):
-        if (len(featuresToTest) == maxFeatures):
-            if not AlreadyTested(featuresToTest, alreadyTested):
-                runTraining(featuresToTest, records)
-                alreadyTested.append(list(featuresToTest))
-            return 
-
-        while features[i] in featuresToTest:
-            i += 1
-            if i == 14:
-                return
-
-        featuresToTest.append(features[i])
-        rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested)
-        featuresToTest.pop()
-        i += 1
-
-def brutForce():
-    bestFeatures = []
-    bestCost = None
-    maxFeatures = 1
-    records = {
-        'bestCost': None,
-        'bestFeatures': []
-        }
-
-    while maxFeatures < 14:
-        rekMeDaddy([], maxFeatures, records, [])
-        maxFeatures += 1
-    print(f"minimal cost = {records['bestCost']} ====> {records['bestFeatures']}")
-
-##################################################################
-
+    endOfTraining(features, weights, studentsData, bestResults, brutForce)
+    return (bestResults['bestCost'])
 
 
 if __name__ == "__main__":
@@ -273,8 +147,8 @@ if __name__ == "__main__":
             brutForce()
         else:
             dataframe, features = formatDataframe()
-            normalizer, studentsData, labels = normalizeData(dataframe)
-            training(normalizer, studentsData, labels, features)
+            normalizer, studentsData = normalizeData(dataframe)
+            training(normalizer, studentsData, features)
 
     except Exception as error:
         print(error)

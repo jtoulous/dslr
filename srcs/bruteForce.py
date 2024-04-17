@@ -1,16 +1,30 @@
+import sys
+import pandas as pd
+import numpy as np
+import math
+from colorama import Fore, Style
+
+from utils.normalizer import normalizeData
+from utils.logs import printLog, printInfo, printError
+from utils.tools import formatDataframe, checkBestResult, AlreadyTested, printEpochInfo, endOfTraining, initWeights
+
+
 def runTraining(features, records):
+    from logreg_train import training
     dataframe = formatDataframe(features)
-    normalizer, studentsData, labels = normalizeData(dataframe)
-    cost = training(normalizer, studentsData, labels, features, 1)
+    normalizer, studentsData = normalizeData(dataframe)
+    cost = training(normalizer, studentsData, features, 1)
     if records['bestCost'] is None or cost < records['bestCost']:
         records['bestCost'] = cost
         records['bestFeatures'] = list(features)
 
-def rekMeDaddy(featuresToTest, maxFeatures, records):
+def rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested):
     features = ['Arithmancy', 'Astronomy', 'Herbology', 'Defense Against the Dark Arts', 'Divination', 'Muggle Studies', 'Ancient Runes', 'History of Magic', 'Transfiguration', 'Potions', 'Care of Magical Creatures', 'Charms', 'Flying', 'Best Hand']
     for i in range(14):
         if (len(featuresToTest) == maxFeatures):
-            runTraining(featuresToTest, records)
+            if not AlreadyTested(featuresToTest, alreadyTested):
+                runTraining(featuresToTest, records)
+                alreadyTested.append(list(featuresToTest))
             return 
 
         while features[i] in featuresToTest:
@@ -19,13 +33,11 @@ def rekMeDaddy(featuresToTest, maxFeatures, records):
                 return
 
         featuresToTest.append(features[i])
-        rekMeDaddy(featuresToTest, maxFeatures, records)
+        rekMeDaddy(featuresToTest, maxFeatures, records, alreadyTested)
         featuresToTest.pop()
         i += 1
 
 def brutForce():
-    bestFeatures = []
-    bestCost = None
     maxFeatures = 1
     records = {
         'bestCost': None,
@@ -33,6 +45,6 @@ def brutForce():
         }
 
     while maxFeatures < 14:
-        rekMeDaddy([], maxFeatures, records)
+        rekMeDaddy([], maxFeatures, records, [])
         maxFeatures += 1
     print(f"minimal cost = {records['bestCost']} ====> {records['bestFeatures']}")
