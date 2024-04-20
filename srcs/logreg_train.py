@@ -6,7 +6,7 @@ from colorama import Fore, Style
 
 from utils.normalizer import normalizeData
 from utils.logs import printLog, printInfo, printError
-from utils.tools import getLastFeatures, initialCheck, formatDataframe, checkBestResult, AlreadyTested, printEpochInfo, endOfTraining, initWeights
+from utils.tools import getLastFeatures, initialCheck, formatDataframe, checkBestResult, printEpochInfo, endOfTraining, initWeights
 from bruteForce import brutForce
 
 def getScores(weights, studentsData):
@@ -121,7 +121,7 @@ def gradientDescent(weights, learningRate, probabilities, studentsData, features
 
 
 def training(normalizer, studentsData, features, brutForce=None):
-    epochs = 700
+    epochs = 300
     learningRate = 0.3
     weights = initWeights(features)
     bestResults = {'bestWeights': {}, 'bestCost': None, 'bestProbs': []}
@@ -136,7 +136,7 @@ def training(normalizer, studentsData, features, brutForce=None):
         if brutForce == None:
             printEpochInfo(i, meanCost, gradients)
 
-    endOfTraining(features, weights, studentsData, bestResults, brutForce)
+    endOfTraining(features, weights, studentsData, bestResults, normalizer, brutForce)
     return (bestResults['bestCost'])
 
 

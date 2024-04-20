@@ -6,8 +6,14 @@ from colorama import Fore, Style
 
 from utils.normalizer import normalizeData
 from utils.logs import printLog, printInfo, printError
-from utils.tools import formatDataframe, checkBestResult, AlreadyTested, printEpochInfo, endOfTraining, initWeights
+from utils.tools import formatDataframe, checkBestResult, printEpochInfo, endOfTraining, initWeights
 
+def AlreadyTested(featuresToTest, alreadyTested):
+    featuresToTestSet = set(featuresToTest)
+    for tested in alreadyTested:
+        if featuresToTestSet == set(tested):
+            return True
+    return False
 
 def runTraining(features, records):
     from logreg_train import training

@@ -90,26 +90,36 @@ def printPredictions(probabilities, studentsData):
         correctPredictPercentage = int((correctPredictCount / len(studentsData)) * 100)
         printLog(f'\n=====> {correctPredictPercentage}% successful')
 
-def saveWeight(weights):
+def saveWeights(weights, normalizer):
     with open('utils/weights.txt', 'w') as weightsFile:
         for house in weights:
             houseWeights = weights[house]
             weightsFile.write(f'{house}:')
-            for feature in houseWeights:
+            for i, feature in enumerate(houseWeights):
                 if feature != 'bias' and feature != 'Best Hand':
-                    weightsFile.write(f'{feature}={houseWeights[feature]},')
+                    weightsFile.write(f'{feature}={houseWeights[feature]}')
                 elif feature == 'Best Hand':
-                    weightsFile.write(f'{feature}={houseWeights[feature][0]}/{houseWeights[feature][1]},')
+                    weightsFile.write(f'{feature}={houseWeights[feature][0]}/{houseWeights[feature][1]}')
                 else:
                     weightsFile.write(f'{feature}={houseWeights[feature]}')
+                if i != len(houseWeights) - 1:
+                    weightsFile.write(',')
             weightsFile.write(f'\n')
 
-def AlreadyTested(featuresToTest, alreadyTested):
-    featuresToTestSet = set(featuresToTest)
-    for tested in alreadyTested:
-        if featuresToTestSet == set(tested):
-            return True
-    return False
+        weightsFile.write(f'Means:')
+        for i, feature in enumerate(normalizer.means):
+            weightsFile.write(f'{feature}={normalizer.means[feature]}')
+            if i != len(normalizer.means) - 1:
+                weightsFile.write(',')
+        weightsFile.write(f'\n')
+
+        weightsFile.write(f'Stds:')
+        for i, feature in enumerate(normalizer.stds):
+            weightsFile.write(f'{feature}={normalizer.stds[feature]}')
+            if i != len(normalizer.stds) - 1:
+                weightsFile.write(',')
+        weightsFile.write(f'\n')
+
 
 def printGradients(gradients):
     for house in gradients:
@@ -129,14 +139,14 @@ def printEpochInfo(i, meanCost, gradients):
             print(f'Cost ====> {meanCost}')
             printGradients(gradients)
 
-def endOfTraining(features, weights, studentsData, bestResults, brutForce):
+def endOfTraining(features, weights, studentsData, bestResults, normalizer, brutForce):
     if brutForce == None:
         printPredictions(bestResults['bestProbs'], studentsData)
     printInfo(f'\n===> Used features : {", ".join(features)}')
     printInfo(f'===> Best cost = {bestResults["bestCost"]}')
     
     if brutForce == None:
-        saveWeight(bestResults['bestWeights'])
+        saveWeights(bestResults['bestWeights'], normalizer)
 
 def checkBestResult(bestResults, meanCost, weights, probabilities):
     if bestResults['bestCost'] is None or meanCost < bestResults['bestCost']:

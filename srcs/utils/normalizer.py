@@ -1,6 +1,5 @@
 import sys
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 
 from .math import getMean, getStd
 from .logs import printLog, printError
@@ -19,11 +18,13 @@ def calcStd(dataframe, features):
         stds.update(new_std)
     return stds
 
-def normalizeData(dataframe):
+def normalizeData(dataframe, means=None, stds=None):
     numericalFeatures = dataframe.select_dtypes(include=['float64'])
-    normalizer = Normalizer(dataframe, numericalFeatures)
     studentsData = []
-    #labelsData = []
+    if means == None:    
+        normalizer = Normalizer(dataframe=dataframe, features=numericalFeatures)
+    else:
+        normalizer = Normalizer(means=means, stds=stds)
     
     for feature in numericalFeatures:
         normalizer.cleanNan(dataframe, feature)
@@ -37,8 +38,9 @@ def normalizeData(dataframe):
             bestHand = dataframe['Best Hand'][i]
             newData['features']['Best Hand'] = normalizer.normalizeHand(bestHand)
 
-        house = dataframe['Hogwarts House'][i]
-        newData['label'] = house
+        if 'Hogwarts House' in dataframe.columns:    
+            house = dataframe['Hogwarts House'][i]
+            newData['label'] = house
 
         studentsData.append(newData)
 
@@ -46,10 +48,14 @@ def normalizeData(dataframe):
 
 
 class Normalizer:
-    def __init__(self, dataframe, features):
-        self.means = calcMeans(dataframe, features)
-        self.stds = calcStd(dataframe, features)
-    
+    def __init__(self, dataframe=None, features=None, means=None, stds=None):
+        if means == None:
+            self.means = calcMeans(dataframe, features)
+            self.stds = calcStd(dataframe, features)
+        else:
+            self.means = means
+            self.stds = stds
+
     def normalize(self, value, feature):
         mean = self.means[feature]
         std = self.stds[feature]
@@ -72,33 +78,8 @@ class Normalizer:
         elif hand == [0, 1]:
             return "Right"
 
-    def normalizeHouse(self, house):
-        if house == "Gryffindor":
-            return [1, 0, 0, 0]
-        elif house == "Hufflepuff":
-            return [0, 1, 0, 0]
-        elif house == "Ravenclaw":
-            return [0, 0, 1, 0]
-        elif house == "Slytherin":
-            return [0, 0, 0, 1]
-        
-    def denormalizeHouse(self, house):
-        if house == [1, 0, 0, 0]:
-            return "Gryffindor"
-        elif house == [0, 1, 0, 0]:
-            return "Hufflepuff"
-        elif house == [0, 0, 1, 0]:
-            return "Ravenclaw"
-        elif house == [0, 0, 0, 1]:
-            return "Slytherin"
-
     def cleanNan(self, dataframe, feature):
         houses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin']
-        medians = {}
 
-        for house in houses:
-            houseData = dataframe[dataframe['Hogwarts House'] == house]
-            medians[house] = houseData[feature].median()
-
-        for house in houses:
-            dataframe.loc[(dataframe['Hogwarts House'] == house) & dataframe[feature].isna(), feature] = medians[house]
+        median = dataframe[feature].median()
+        dataframe.loc[dataframe[feature].isna(), feature] = median
