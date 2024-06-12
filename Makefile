@@ -11,13 +11,13 @@ venv:
 
 install:
 	@echo "$(GREEN)installing dependencies...$(RESET)"
-	@. virtualEnv/bin/activate
-	@pip install -r requirements.txt
+	@. virtualEnv/bin/activate && pip install -r requirements.txt
 	@echo "$(GREEN)Done.$(RESET)"
 
 clean:
 	@echo "$(RED)removing virtual environnement...$(RESET)"
 	@rm -rf virtualEnv
 	@echo "$(RED)Done.$(RESET)"
+	@rm -f srcs/utils/weights.txt
 
 .PHONY: all venv install clean 

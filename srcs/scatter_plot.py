@@ -5,7 +5,7 @@ from colorama import Fore, Style
 from utils.logs import printError, printInfo, printLog
 
 def dslrScatter():
-    dataframe = pd.read_csv('../datasets/dataset_train.csv')
+    dataframe = pd.read_csv('datasets/dataset_train.csv')
     featureData1 = dataframe['Defense Against the Dark Arts']
     featureData2 = dataframe['Astronomy']
 

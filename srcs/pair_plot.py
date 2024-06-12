@@ -38,7 +38,7 @@ def separateData(dataframe=None, featureData1=None, featureData2=None, plotType=
 
 
 def buildPair():
-    dataframe = pd.read_csv("../datasets/dataset_train.csv")
+    dataframe = pd.read_csv("datasets/dataset_train.csv")
     features = dataframe.select_dtypes(include=["float64"]).columns
     labels = [feature.split(' ')[0] for feature in features]
 

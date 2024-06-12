@@ -5,7 +5,7 @@ from colorama import Fore, Style
 from utils.logs import printError, printInfo, printLog
 
 def dslrHisto():
-    dataframe = pd.read_csv("../datasets/dataset_train.csv")
+    dataframe = pd.read_csv("datasets/dataset_train.csv")
     featureData = dataframe["Care of Magical Creatures"]
 
     gryffData, hufflData, ravenData, slythData = separateData(dataframe, featureData)

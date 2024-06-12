@@ -1,4 +1,5 @@
 import sys
+import os
 import pandas as pd
 import numpy as np
 import math
@@ -38,21 +39,28 @@ def formatDataframe(brutForceFeatures=None):
     chosenFeatures = []
     done = 0
 
-    retest = input(f'{Fore.GREEN}Retry last used features?\n\'yes\' or \'no\': {Style.RESET_ALL}')
-    if retest == 'yes':
-        retestFeatures = getLastFeatures()
-        featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in retestFeatures and feat != 'Hogwarts House']
-        dataframe = dataframe.drop(columns=featuresToDrop)
-        return dataframe, retestFeatures
+    if os.path.exists('utils/weights.txt'):
+        retest = input(f'{Fore.GREEN}Retry last used features?\n\'yes\' or \'no\': {Style.RESET_ALL}')
+        if retest == 'yes':
+            retestFeatures = getLastFeatures()
+            featuresToDrop = [feat for feat in tmpDataframe.columns if feat not in retestFeatures and feat != 'Hogwarts House']
+            dataframe = dataframe.drop(columns=featuresToDrop)
+            return dataframe, retestFeatures
     
     tmpDataframe = tmpDataframe.drop(columns=["Hogwarts House"])
     while True:    
         print('')
         for i, feature in enumerate(tmpDataframe.columns):     
             printInfo(f'{i}: {feature}')
+        printInfo('\nall : \'all\'')
         printInfo('Finished : \'done\'\n')
         
         entry = input(f'{Fore.GREEN}make your choice: {Style.RESET_ALL}')
+
+        if entry == 'all':
+            chosenFeatures = list(dataframe.columns)
+            chosenFeatures.remove('Hogwarts House')
+            return dataframe, chosenFeatures
 
         if entry == 'done':
             tmpDataframe = dataframe.copy()
@@ -63,10 +71,10 @@ def formatDataframe(brutForceFeatures=None):
         entry = int(entry)
         if entry >= len(tmpDataframe.columns):
             printError(f'feature {entry} not available')
-        
-        chosenfeat = tmpDataframe.columns[entry]
-        chosenFeatures.append(chosenfeat)
-        tmpDataframe = tmpDataframe.drop(columns=[chosenfeat])
+        else:
+            chosenfeat = tmpDataframe.columns[entry]
+            chosenFeatures.append(chosenfeat)
+            tmpDataframe = tmpDataframe.drop(columns=[chosenfeat])
 
 
 def printPredictions(probabilities, studentsData):
